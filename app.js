@@ -18,6 +18,10 @@ const LS = {
 
 const el = (id) => document.getElementById(id);
 const src = el("src");
+
+// textarea 預設不展開：focus 時展開，blur 時收合（避免一直佔畫面）
+src.addEventListener("focus", () => src.classList.add("ta-expanded"));
+src.addEventListener("blur", () => src.classList.remove("ta-expanded"));
 const sheet = el("sheet");
 
 const speed = el("speed");
@@ -202,7 +206,7 @@ function setSpeed(v) {
   speedPxPerSec = clamp(Number(v), 0, 9999);
   speed.value = String(speedPxPerSec);
   speedVal.textContent = String(speedPxPerSec);
-  statusSpeed.textContent = String(speedPxPerSec);
+  if (statusSpeed) statusSpeed.textContent = String(speedPxPerSec);
   localStorage.setItem(LS.SPEED, String(speedPxPerSec));
 }
 
@@ -324,12 +328,12 @@ btnUp.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift += 1
 btnDown.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift -= 1; render(); });
 btnReset.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift = 0; render(); });
 
-btnTop.addEventListener("click", (e) => {
+btnTop && btnTop.addEventListener("click", (e) => {
   e.stopPropagation();
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-btnClear.addEventListener("click", (e) => {
+btnClear && btnClear.addEventListener("click", (e) => {
   e.stopPropagation();
   src.value = "";
   semitoneShift = 0;

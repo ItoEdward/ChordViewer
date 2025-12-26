@@ -27,17 +27,22 @@ button:hover { border-color: #3a5275; }
 @media (max-width: 980px) { .split { grid-template-columns: 1fr; } header { position: static; } }
 
 textarea {
-  width: 100%; height: calc(100vh - 140px);
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 12px;
-  resize: vertical;
-  line-height: 1.35;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13px;
-}
+      width: 100%;
+      height: 140px; /* 預設不展開 */
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      resize: vertical;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      transition: height .18s ease;
+    }
+    textarea.ta-expanded {
+      height: calc(100vh - 140px); /* 進行編輯時展開 */
+    }
 main {
   background: var(--panel);
   border: 1px solid var(--line);
