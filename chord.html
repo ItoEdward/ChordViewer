@@ -88,6 +88,19 @@
   <header>
     <div class="row">
       <div class="group">
+        <button id="btnPlay" title="Space">▶︎</button>
+        <span class="pill" id="playState">Paused</span>
+      </div>
+
+      <div class="group">
+        <label>歌曲</label>
+        <select id="songSelect">
+          <option value="">（讀取 songs/index.json…）</option>
+        </select>
+        <button id="btnReloadSongs">重新讀取</button>
+      </div>
+
+      <div class="group">
         <button id="btnClear">清空</button>
         <button id="btnTop" title="Home">回頂</button>
         <span class="pill">
@@ -132,6 +145,8 @@
       <button id="btnUp" title="+ (半音)">+</button>
       <button id="btnReset">重置</button>
     </div>
+    <span class="pill">半音：<strong id="statusSemi">0</strong></span>
+    <span class="pill">速度：<strong id="statusSpeed">60</strong></span>
 
     <span id="statusMsg" class="pill" style="max-width: 240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
   </div>
