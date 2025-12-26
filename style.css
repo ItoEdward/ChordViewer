@@ -1,0 +1,102 @@
+:root{
+  --bg:#0b0f14;
+  --panel:#121826;
+  --text:#e6edf3;
+  --muted:#9aa4b2;
+  --line:#223044;
+  --fontSize:18px;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial;
+}
+
+.topbar{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(11,15,20,.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.group{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.lbl{
+  font-size:12px;
+  color: var(--muted);
+}
+
+.btn, .rng{
+  color: var(--text);
+  background: #0f1623;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline:none;
+}
+
+.btn{ cursor:pointer; }
+.btn:hover{ border-color:#3a5275; }
+
+.pill{
+  font-size:12px;
+  color: var(--muted);
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.main{
+  padding: 12px;
+}
+
+.sheetWrap{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  min-height: calc(100vh - 84px);
+  overflow: hidden;
+}
+
+/* 顯示區：不放任何預設字 */
+.sheet{
+  user-select:none;
+  line-height:1.55;
+  font-size: var(--fontSize);
+  cursor:pointer;
+}
+
+.line{
+  padding: 2px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chord{
+  color:#ffd479;
+  font-weight:700;
+}
