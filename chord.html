@@ -4,48 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Chord Viewer</title>
-    <link rel="stylesheet" href="./style.css" />
-
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <header>
     <div class="row">
       <div class="group">
-        <button id="btnPlay" title="Space">▶︎</button>
-        <span class="pill" id="playState">Paused</span>
-      </div>
-
-      <div class="group">
         <label>歌曲</label>
         <select id="songSelect">
           <option value="">（讀取 songs/index.json…）</option>
         </select>
-        <button id="btnReloadSongs">重新讀取</button>
       </div>
 
       <div class="group">
-        <label>速度</label>
-        <input id="speed" type="range" min="0" max="220" value="60" />
-        <span class="pill"><span id="speedVal">60</span> px/s</span>
-      </div>
-
-      <div class="group">
-        <label>字體</label>
+        <label>字體大小</label>
         <input id="fontSize" type="range" min="12" max="34" value="18" />
         <span class="pill"><span id="fontVal">18</span> px</span>
-      </div>
-
-      <div class="group">
-        <label>轉調(半音)</label>
-        <button id="btnDown" title="- (半音)">-</button>
-        <span class="pill"><span id="semiVal">0</span></span>
-        <button id="btnUp" title="+ (半音)">+</button>
-        <button id="btnReset">重置</button>
-      </div>
-
-      <div class="group"><span class="pill">
-          點譜面切換播放 · <span class="kbd">Space</span> · <span class="kbd">↑↓</span>速度 · <span class="kbd">+/-</span>轉調
-        </span>
       </div>
     </div>
   </header>
@@ -53,8 +27,8 @@
   <div class="split">
     <section>
       <p class="hint">
-        左邊是目前載入的歌曲原文（可選擇要不要手動微調）。<br>
-        你若放 <code>key/capo/bpm/title/artist</code> 行會被自動忽略不顯示。
+        左邊是目前載入的歌曲原文（可手動編輯）。<br>
+        <code>title/artist/key/capo/bpm</code> 行會被自動忽略不顯示；其中 <code>bpm:</code> 會影響自動下拉速度。
       </p>
       <textarea id="src" spellcheck="false"></textarea>
     </section>
@@ -66,8 +40,18 @@
   </div>
 
   <div class="activeBar">
-    <span>半音：</span><strong id="statusSemi">0</strong>
-    <span id="statusMsg" style="color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+    <div class="group">
+      <label>速度</label>
+      <input id="speed" type="range" min="0" max="220" value="60" />
+      <span class="pill"><span id="speedVal">60</span> px/s</span>
+    </div>
+
+    <div class="group">
+      <label>半音</label>
+      <button id="btnDown" title="- (半音)">-</button>
+      <span class="pill"><span id="semiVal">0</span></span>
+      <button id="btnUp" title="+ (半音)">+</button>
+    </div>
   </div>
 
   <script src="./app.js"></script>

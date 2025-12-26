@@ -1,50 +1,38 @@
 // =====================
-// Chord Viewer (v4)
-// - No import/export
+// Chord Viewer (minimal)
+// - Header: songSelect + font size
+// - ActiveBar: speed + transpose (+/-)
 // - Auto load songs from ./songs/index.json
+// - Click sheet / Space to toggle play
 // =====================
 
 const SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const FLAT  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 
 const LS = {
-  SRC: "cv_src_v4",
-  SPEED: "cv_speed_v4",
-  FONT: "cv_font_v4",
-  SEMI: "cv_semi_v4",
-  SCROLL: "cv_scroll_v4",
-  LAST_SONG: "cv_last_song_v4"
+  SRC: "cv_src_min",
+  SPEED: "cv_speed_min",
+  FONT: "cv_font_min",
+  SEMI: "cv_semi_min",
+  LAST_SONG: "cv_last_song_min"
 };
 
 const el = (id) => document.getElementById(id);
-const src = el("src");
 
-// textarea 預設不展開：focus 時展開，blur 時收合（避免一直佔畫面）
-src.addEventListener("focus", () => src.classList.add("ta-expanded"));
-src.addEventListener("blur", () => src.classList.remove("ta-expanded"));
+const src = el("src");
 const sheet = el("sheet");
 
 const speed = el("speed");
 const speedVal = el("speedVal");
+
 const fontSize = el("fontSize");
 const fontVal = el("fontVal");
 
-const btnPlay = el("btnPlay");
-const playState = el("playState");
 const btnUp = el("btnUp");
 const btnDown = el("btnDown");
-const btnReset = el("btnReset");
 const semiVal = el("semiVal");
 
 const songSelect = el("songSelect");
-const btnReloadSongs = el("btnReloadSongs");
-
-const btnTop = el("btnTop");
-const btnClear = el("btnClear");
-
-const statusSemi = el("statusSemi");
-const statusSpeed = el("statusSpeed");
-const statusMsg = el("statusMsg");
 
 // ----- State -----
 let isPlaying = false;
@@ -52,6 +40,9 @@ let speedPxPerSec = 60;
 let fontPx = 18;
 let semitoneShift = 0;
 let lastTs = null;
+
+const BPM_REF = 120;
+let currentBpm = null; // number | null
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
@@ -147,6 +138,25 @@ function isMetaLine(line) {
   return false;
 }
 
+function parseMeta(raw) {
+  const lines = String(raw || "").split(/\r?\n/);
+  for (const line of lines) {
+    // bpm: 148
+    let m = line.match(/^\s*bpm\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*$/i);
+    if (m) return { bpm: Number(m[1]) };
+
+    // {bpm: 148}
+    m = line.match(/^\s*\{\s*bpm\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*\}\s*$/i);
+    if (m) return { bpm: Number(m[1]) };
+  }
+  return { bpm: null };
+}
+
+function getEffectiveSpeed() {
+  if (!currentBpm || !Number.isFinite(currentBpm) || currentBpm <= 0) return speedPxPerSec;
+  return speedPxPerSec * (currentBpm / BPM_REF);
+}
+
 function parseTextToHtml(raw, semitone, preferFlat) {
   const lines = raw.replace(/\r\n/g, "\n").split("\n");
   const out = [];
@@ -179,25 +189,18 @@ function parseTextToHtml(raw, semitone, preferFlat) {
 }
 
 // ----- Auto Scroll -----
-function updatePlayUi() {
-  btnPlay.textContent = isPlaying ? "⏸" : "▶︎";
-  playState.textContent = isPlaying ? "Playing" : "Paused";
-  statusMsg.textContent = isPlaying ? "自動下拉中（點譜面/Space 暫停）" : "已暫停（點譜面/Space 播放）";
-}
-
 function tick(ts) {
   if (!isPlaying) { lastTs = null; return; }
   if (lastTs == null) lastTs = ts;
   const dt = (ts - lastTs) / 1000;
   lastTs = ts;
 
-  window.scrollBy(0, speedPxPerSec * dt);
+  window.scrollBy(0, getEffectiveSpeed() * dt);
   requestAnimationFrame(tick);
 }
 
 function togglePlay() {
   isPlaying = !isPlaying;
-  updatePlayUi();
   if (isPlaying) requestAnimationFrame(tick);
 }
 
@@ -205,21 +208,25 @@ function togglePlay() {
 function setSpeed(v) {
   speedPxPerSec = clamp(Number(v), 0, 9999);
   speed.value = String(speedPxPerSec);
-  speedVal.textContent = String(speedPxPerSec);
-  if (statusSpeed) statusSpeed.textContent = String(speedPxPerSec);
+  if (speedVal) speedVal.textContent = String(speedPxPerSec);
   localStorage.setItem(LS.SPEED, String(speedPxPerSec));
 }
 
 function setFont(v) {
   fontPx = clamp(Number(v), 10, 80);
   fontSize.value = String(fontPx);
-  fontVal.textContent = String(fontPx);
+  if (fontVal) fontVal.textContent = String(fontPx);
   document.documentElement.style.setProperty("--fontSize", fontPx + "px");
   localStorage.setItem(LS.FONT, String(fontPx));
 }
 
 function render() {
   const raw = src.value || "";
+
+  // meta: bpm 等（不顯示在譜面上，但會影響自動下拉速度）
+  const meta = parseMeta(raw);
+  currentBpm = meta.bpm;
+
   const preferFlat = autoPreferFlatFromSource(raw);
 
   if (!raw.trim()) {
@@ -228,8 +235,7 @@ function render() {
     sheet.innerHTML = parseTextToHtml(raw, semitoneShift, preferFlat);
   }
 
-  semiVal.textContent = String(semitoneShift);
-  statusSemi.textContent = String(semitoneShift);
+  if (semiVal) semiVal.textContent = String(semitoneShift);
 
   localStorage.setItem(LS.SRC, raw);
   localStorage.setItem(LS.SEMI, String(semitoneShift));
@@ -239,7 +245,6 @@ function render() {
 async function loadSongsList() {
   songSelect.innerHTML = `<option value="">（讀取 songs/index.json…）</option>`;
 
-  // cache busting
   const url = `./songs/index.json?_=${Date.now()}`;
   let data;
 
@@ -249,15 +254,12 @@ async function loadSongsList() {
     data = await res.json();
   } catch (err) {
     songSelect.innerHTML = `<option value="">（找不到 songs/index.json 或不能用 file:// 開啟）</option>`;
-    // 給你更明確的提示
     src.value = localStorage.getItem(LS.SRC) ?? "";
     semitoneShift = Number(localStorage.getItem(LS.SEMI) ?? 0);
     render();
-    statusMsg.textContent = "請用 GitHub Pages 或本機 http server 開啟，並建立 songs/index.json";
     return;
   }
 
-  // 支援 ["a.txt"] 或 [{file,title}]
   const items = Array.isArray(data) ? data : [];
   const normalized = items.map((x) => {
     if (typeof x === "string") return { file: x, title: x };
@@ -278,7 +280,6 @@ async function loadSongsList() {
     songSelect.appendChild(opt);
   }
 
-  // 自動載入上次開的歌，否則第一首
   const last = localStorage.getItem(LS.LAST_SONG);
   const toLoad = normalized.some(x => x.file === last) ? last : normalized[0].file;
   songSelect.value = toLoad;
@@ -295,60 +296,33 @@ async function loadSongFile(file) {
     const text = await res.text();
 
     src.value = text;
-    semitoneShift = 0; // 換歌清零轉調（你要保留也行，但通常換歌清零比較合理）
+    semitoneShift = 0; // 換歌清零轉調
     localStorage.setItem(LS.LAST_SONG, file);
     render();
-    statusMsg.textContent = `已載入：${file}`;
     window.scrollTo({ top: 0, behavior: "instant" });
   } catch (err) {
-    statusMsg.textContent = `讀取失敗：${file}（請確認 songs/ 底下有此檔案）`;
+    console.warn("讀取失敗：", file, err);
   }
 }
 
-// Save scroll position
-let scrollSaveTimer = null;
-window.addEventListener("scroll", () => {
-  if (scrollSaveTimer) return;
-  scrollSaveTimer = setTimeout(() => {
-    localStorage.setItem(LS.SCROLL, String(window.scrollY || 0));
-    scrollSaveTimer = null;
-  }, 200);
-});
-
 // Events
 sheet.addEventListener("click", () => togglePlay());
-btnPlay.addEventListener("click", (e) => { e.stopPropagation(); togglePlay(); });
 
 speed.addEventListener("input", () => setSpeed(speed.value));
+
 fontSize.addEventListener("input", () => setFont(fontSize.value));
 
 src.addEventListener("input", () => render());
+src.addEventListener("change", () => render());
+src.addEventListener("compositionend", () => render());
 
 btnUp.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift += 1; render(); });
 btnDown.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift -= 1; render(); });
-btnReset.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift = 0; render(); });
-
-btnTop && btnTop.addEventListener("click", (e) => {
-  e.stopPropagation();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-
-btnClear && btnClear.addEventListener("click", (e) => {
-  e.stopPropagation();
-  src.value = "";
-  semitoneShift = 0;
-  render();
-});
 
 songSelect.addEventListener("change", async () => {
   const file = songSelect.value;
   if (!file) return;
   await loadSongFile(file);
-});
-
-btnReloadSongs.addEventListener("click", async (e) => {
-  e.stopPropagation();
-  await loadSongsList();
 });
 
 // Keyboard shortcuts
@@ -362,7 +336,6 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowDown") { e.preventDefault(); setSpeed(speedPxPerSec - 5); }
   if (e.key === "+" || e.key === "=") { e.preventDefault(); semitoneShift += 1; render(); }
   if (e.key === "-" || e.key === "_") { e.preventDefault(); semitoneShift -= 1; render(); }
-  if (e.key === "Home") { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
 
 // Init
@@ -373,12 +346,5 @@ document.addEventListener("keydown", (e) => {
   semitoneShift = Number(localStorage.getItem(LS.SEMI) ?? 0);
 
   render();
-  updatePlayUi();
-
-  requestAnimationFrame(() => {
-    const y = Number(localStorage.getItem(LS.SCROLL) ?? 0);
-    if (!Number.isNaN(y) && y > 0) window.scrollTo(0, y);
-  });
-
   await loadSongsList();
 })();
