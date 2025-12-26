@@ -4,53 +4,75 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Chord Viewer</title>
-  <link rel="stylesheet" href="./style.css" />
-</head>
+    <link rel="stylesheet" href="./style.css" />
 
+</head>
 <body>
-  <header class="topbar">
+  <header>
     <div class="row">
       <div class="group">
-        <button id="btnPlay" class="btn" title="Space">▶︎</button>
-        <span id="playState" class="pill">Paused</span>
-      </div>
-
-      <div class="group" id="songsGroup">
-        <label class="lbl">歌曲</label>
-        <select id="songSelect" class="sel"></select>
-        <button id="btnRescan" class="btn">重新掃描</button>
-        <span id="songStatus" class="pill"></span>
+        <button id="btnPlay" title="Space">▶︎</button>
+        <span class="pill" id="playState">Paused</span>
       </div>
 
       <div class="group">
-        <label class="lbl">速度</label>
-        <input id="speed" class="rng" type="range" min="0" max="220" value="60" />
+        <label>歌曲</label>
+        <select id="songSelect">
+          <option value="">（讀取 songs/index.json…）</option>
+        </select>
+        <button id="btnReloadSongs">重新讀取</button>
+      </div>
+
+      <div class="group">
+        <label>速度</label>
+        <input id="speed" type="range" min="0" max="220" value="60" />
         <span class="pill"><span id="speedVal">60</span> px/s</span>
       </div>
 
       <div class="group">
-        <label class="lbl">字體</label>
-        <input id="fontSize" class="rng" type="range" min="12" max="34" value="18" />
+        <label>字體</label>
+        <input id="fontSize" type="range" min="12" max="34" value="18" />
         <span class="pill"><span id="fontVal">18</span> px</span>
       </div>
 
       <div class="group">
-        <label class="lbl">轉調(半音)</label>
-        <button id="btnDown" class="btn" title="-">-</button>
+        <label>轉調(半音)</label>
+        <button id="btnDown" title="- (半音)">-</button>
         <span class="pill"><span id="semiVal">0</span></span>
-        <button id="btnUp" class="btn" title="+">+</button>
-        <button id="btnReset" class="btn">重置</button>
+        <button id="btnUp" title="+ (半音)">+</button>
+        <button id="btnReset">重置</button>
       </div>
 
-      <span class="pill">點譜面：播放/暫停</span>
+      <div class="group">
+        <button id="btnClear">清空</button>
+        <button id="btnTop" title="Home">回頂</button>
+        <span class="pill">
+          點譜面切換播放 · <span class="kbd">Space</span> · <span class="kbd">↑↓</span>速度 · <span class="kbd">+/-</span>轉調
+        </span>
+      </div>
     </div>
   </header>
 
-  <main class="main">
-    <div class="sheetWrap">
+  <div class="split">
+    <section>
+      <p class="hint">
+        左邊是目前載入的歌曲原文（可選擇要不要手動微調）。<br>
+        你若放 <code>key/capo/bpm/title/artist</code> 行會被自動忽略不顯示。
+      </p>
+      <textarea id="src" spellcheck="false"></textarea>
+    </section>
+
+    <main>
+      <p class="hint">譜面顯示區（點一下開始/暫停自動下拉）</p>
       <div id="sheet" class="sheet"></div>
-    </div>
-  </main>
+    </main>
+  </div>
+
+  <div class="activeBar">
+    <span>半音：</span><strong id="statusSemi">0</strong>
+    <span>速度：</span><strong id="statusSpeed">60</strong>
+    <span id="statusMsg" style="color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+  </div>
 
   <script src="./app.js"></script>
 </body>

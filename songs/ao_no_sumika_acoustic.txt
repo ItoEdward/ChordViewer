@@ -1,14 +1,26 @@
-{title: 青のすみか (Acoustic ver.)}
-{artist: キタニタツヤ}
-{key: C}
-{capo: 1}
-{bpm: 148}
+title: 青のすみか (Acoustic) — Demo
+artist: キタニタツヤ
+key: Em
+capo: 2
+bpm: 78
 
 {section: Intro}
-[Am7] [Dm7] [E7]
-...
+{t: 0:00} [Em]            [C]            [G]            [D]
+{t: 0:08} [Em]            [C]            [G]            [D]
 
-{section: Aメロ}
-{t:00:07} [FM7]どこまでも続くような
-{t:00:10} [C/E]青の季節は
-...
+{section: Verse}
+{t: 0:16} [Em]言葉にならないまま  [C]飲み込んだ夜に
+{t: 0:24} [G]君の影を探して     [D]歩いてた
+
+{section: Pre-Chorus}
+{t: 0:32} [C]息を吸うたびに  [D]胸が痛むのは
+{t: 0:40} [Em]まだここに      [G]残ってるから
+
+{section: Chorus}
+{t: 0:48} [C]青のすみかへ    [D]連れて行って
+{t: 0:56} [Em]もう一度だけ   [G]笑ってよ
+{t: 1:04} [C]わからないまま  [D]でも進むんだ
+{t: 1:12} [Em]                [C]                [G]                [D]
+
+# 註：以上為示範用格式（ChordPro + {t: mm:ss} + {section: ...}）。
+# 你可以把完整歌詞/和弦貼進來取代，或新增更多歌曲檔與 index.json 條目。
