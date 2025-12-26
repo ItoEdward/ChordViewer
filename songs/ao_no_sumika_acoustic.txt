@@ -1,0 +1,14 @@
+{title: 青のすみか (Acoustic ver.)}
+{artist: キタニタツヤ}
+{key: C}
+{capo: 1}
+{bpm: 148}
+
+{section: Intro}
+[Am7] [Dm7] [E7]
+...
+
+{section: Aメロ}
+{t:00:07} [FM7]どこまでも続くような
+{t:00:10} [C/E]青の季節は
+...
