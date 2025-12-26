@@ -1,19 +1,19 @@
 // =====================
-// Minimal Chord Viewer
-// - No key-apply UI
-// - Ignore meta lines: title/artist/key/capo/bpm
+// Chord Viewer (v4)
+// - No import/export
+// - Auto load songs from ./songs/index.json
 // =====================
 
 const SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const FLAT  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 
 const LS = {
-  SRC: "cv_src_v2",
-  SPEED: "cv_speed_v2",
-  FONT: "cv_font_v2",
-  SEMI: "cv_semi_v2",
-  ACC: "cv_acc_v2",
-  SCROLL: "cv_scroll_v2"
+  SRC: "cv_src_v4",
+  SPEED: "cv_speed_v4",
+  FONT: "cv_font_v4",
+  SEMI: "cv_semi_v4",
+  SCROLL: "cv_scroll_v4",
+  LAST_SONG: "cv_last_song_v4"
 };
 
 const el = (id) => document.getElementById(id);
@@ -32,9 +32,10 @@ const btnDown = el("btnDown");
 const btnReset = el("btnReset");
 const semiVal = el("semiVal");
 
-const accidental = el("accidental");
+const songSelect = el("songSelect");
+const btnReloadSongs = el("btnReloadSongs");
+
 const btnTop = el("btnTop");
-const btnSample = el("btnSample");
 const btnClear = el("btnClear");
 
 const statusSemi = el("statusSemi");
@@ -69,7 +70,6 @@ function parseRoot(s) {
   return { root: m[1] + (m[2] || ""), rest: m[3] || "" };
 }
 
-// auto(#/b): 看你貼的譜本身偏好（和弦 token 內 b 的數量 vs #）
 function autoPreferFlatFromSource(raw) {
   const tokens = raw.match(/\[([^\]]+)\]/g) || [];
   let flats = 0, sharps = 0;
@@ -78,12 +78,6 @@ function autoPreferFlatFromSource(raw) {
     sharps += (t.match(/#/g) || []).length;
   }
   return flats >= sharps;
-}
-
-function choosePreferFlat(mode, raw) {
-  if (mode === "flat") return true;
-  if (mode === "sharp") return false;
-  return autoPreferFlatFromSource(raw);
 }
 
 function transposeChordToken(chord, semitone, preferFlat) {
@@ -143,11 +137,8 @@ function renderInlineChords(text) {
   return result;
 }
 
-// 忽略你說用不到的 meta 行（不顯示）
 function isMetaLine(line) {
-  // e.g. "key: Db" / "capo: 0" / "bpm: 148" / "title:" / "artist:"
   if (/^\s*(title|artist|key|capo|bpm)\s*:/i.test(line)) return true;
-  // e.g. "{title: ...}" "{artist: ...}" etc
   if (/^\s*\{(title|artist|key|capo|bpm)\s*:/i.test(line)) return true;
   return false;
 }
@@ -176,7 +167,6 @@ function parseTextToHtml(raw, semitone, preferFlat) {
     }
 
     const html = renderInlineChords(rest);
-
     if (time) out.push(`<div class="line"><span class="time">${escapeHtml(time)}</span>${html}</div>`);
     else out.push(`<div class="line">${html || "&nbsp;"}</div>`);
   }
@@ -225,80 +215,90 @@ function setFont(v) {
 }
 
 function render() {
-  const preferFlat = choosePreferFlat(accidental.value, src.value);
-  sheet.innerHTML = parseTextToHtml(src.value, semitoneShift, preferFlat);
+  const raw = src.value || "";
+  const preferFlat = autoPreferFlatFromSource(raw);
+
+  if (!raw.trim()) {
+    sheet.innerHTML = `<div class="line" style="color:#9aa4b2;">（未載入歌曲：請確認有 songs/index.json 與歌曲檔案，且用 http(s) 開啟）</div>`;
+  } else {
+    sheet.innerHTML = parseTextToHtml(raw, semitoneShift, preferFlat);
+  }
 
   semiVal.textContent = String(semitoneShift);
   statusSemi.textContent = String(semitoneShift);
 
-  localStorage.setItem(LS.SRC, src.value);
+  localStorage.setItem(LS.SRC, raw);
   localStorage.setItem(LS.SEMI, String(semitoneShift));
-  localStorage.setItem(LS.ACC, accidental.value);
 }
 
-// 「整首歌」我不能貼完整歌詞給你，所以這裡提供：
-// - 歌名/歌手行（會被 meta filter 忽略）
-// - key/capo/bpm 行（也會被忽略）
-// - 全段落骨架 + 你自己貼歌詞的位置
-function loadTemplate() {
-  src.value =
-`青のすみか (Acoustic ver.)
-キタニタツヤ
-key: Db
-capo: 0
-bpm: 148
+// ----- Songs loader -----
+async function loadSongsList() {
+  songSelect.innerHTML = `<option value="">（讀取 songs/index.json…）</option>`;
 
-{section: Intro}
-[Db] [Bbm7] [Gb] [Ab]
+  // cache busting
+  const url = `./songs/index.json?_=${Date.now()}`;
+  let data;
 
-{section: Aメロ}
-{t:00:07} [Db]（這行貼上你的歌詞…）
-{t:00:10} [Bbm7]（這行貼上你的歌詞…）
-{t:00:13} [Gb]（這行貼上你的歌詞…）
-{t:00:16} [Ab]（這行貼上你的歌詞…）
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    data = await res.json();
+  } catch (err) {
+    songSelect.innerHTML = `<option value="">（找不到 songs/index.json 或不能用 file:// 開啟）</option>`;
+    // 給你更明確的提示
+    src.value = localStorage.getItem(LS.SRC) ?? "";
+    semitoneShift = Number(localStorage.getItem(LS.SEMI) ?? 0);
+    render();
+    statusMsg.textContent = "請用 GitHub Pages 或本機 http server 開啟，並建立 songs/index.json";
+    return;
+  }
 
-{section: Bメロ}
-{t:00:23} [Db]（貼歌詞…）
-{t:00:27} [Bbm7]（貼歌詞…）
-{t:00:31} [Gb]（貼歌詞…）
-{t:00:35} [Ab]（貼歌詞…）
+  // 支援 ["a.txt"] 或 [{file,title}]
+  const items = Array.isArray(data) ? data : [];
+  const normalized = items.map((x) => {
+    if (typeof x === "string") return { file: x, title: x };
+    if (x && typeof x === "object") return { file: x.file, title: x.title || x.file };
+    return null;
+  }).filter(Boolean);
 
-{section: サビ}
-{t:00:55} [Bbm7]（貼歌詞…）
-{t:00:59} [Gb]（貼歌詞…）
-{t:01:03} [Db]（貼歌詞…）
-{t:01:07} [Ab]（貼歌詞…）
+  if (normalized.length === 0) {
+    songSelect.innerHTML = `<option value="">（songs/index.json 內容為空）</option>`;
+    return;
+  }
 
-{section: 間奏}
-[Db] [Bbm7] [Gb] [Ab]
+  songSelect.innerHTML = `<option value="">（選擇歌曲）</option>`;
+  for (const it of normalized) {
+    const opt = document.createElement("option");
+    opt.value = it.file;
+    opt.textContent = it.title;
+    songSelect.appendChild(opt);
+  }
 
-{section: 2Aメロ}
-{t:01:30} [Db]（貼歌詞…）
-...
-
-{section: 2Bメロ}
-{t:01:50} [Db]（貼歌詞…）
-...
-
-{section: 2サビ}
-{t:02:20} [Bbm7]（貼歌詞…）
-...
-
-{section: ラストサビ}
-{t:03:00} [Bbm7]（貼歌詞…）
-...
-
-{section: Outro}
-[Db] [Bbm7] [Gb] [Ab]
-`;
-  semitoneShift = 0;
-  render();
+  // 自動載入上次開的歌，否則第一首
+  const last = localStorage.getItem(LS.LAST_SONG);
+  const toLoad = normalized.some(x => x.file === last) ? last : normalized[0].file;
+  songSelect.value = toLoad;
+  await loadSongFile(toLoad);
 }
 
-function clearAll() {
-  src.value = "";
-  semitoneShift = 0;
-  render();
+async function loadSongFile(file) {
+  if (!file) return;
+  const url = `./songs/${encodeURIComponent(file)}?_=${Date.now()}`;
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    src.value = text;
+    semitoneShift = 0; // 換歌清零轉調（你要保留也行，但通常換歌清零比較合理）
+    localStorage.setItem(LS.LAST_SONG, file);
+    render();
+    statusMsg.textContent = `已載入：${file}`;
+    window.scrollTo({ top: 0, behavior: "instant" });
+  } catch (err) {
+    statusMsg.textContent = `讀取失敗：${file}（請確認 songs/ 底下有此檔案）`;
+  }
 }
 
 // Save scroll position
@@ -324,15 +324,28 @@ btnUp.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift += 1
 btnDown.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift -= 1; render(); });
 btnReset.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift = 0; render(); });
 
-accidental.addEventListener("change", () => render());
-
 btnTop.addEventListener("click", (e) => {
   e.stopPropagation();
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-btnSample.addEventListener("click", (e) => { e.stopPropagation(); loadTemplate(); });
-btnClear.addEventListener("click", (e) => { e.stopPropagation(); clearAll(); });
+btnClear.addEventListener("click", (e) => {
+  e.stopPropagation();
+  src.value = "";
+  semitoneShift = 0;
+  render();
+});
+
+songSelect.addEventListener("change", async () => {
+  const file = songSelect.value;
+  if (!file) return;
+  await loadSongFile(file);
+});
+
+btnReloadSongs.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  await loadSongsList();
+});
 
 // Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
@@ -349,13 +362,11 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Init
-(function init() {
+(async function init() {
   src.value = localStorage.getItem(LS.SRC) ?? "";
   setSpeed(localStorage.getItem(LS.SPEED) ?? 60);
   setFont(localStorage.getItem(LS.FONT) ?? 18);
-
   semitoneShift = Number(localStorage.getItem(LS.SEMI) ?? 0);
-  accidental.value = localStorage.getItem(LS.ACC) ?? "auto";
 
   render();
   updatePlayUi();
@@ -365,5 +376,5 @@ document.addEventListener("keydown", (e) => {
     if (!Number.isNaN(y) && y > 0) window.scrollTo(0, y);
   });
 
-  if (!src.value.trim()) loadTemplate();
+  await loadSongsList();
 })();
