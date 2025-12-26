@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chord Viewer (Minimal)</title>
+  <style>
+    :root { --bg:#0b0f14; --panel:#121826; --text:#e6edf3; --muted:#9aa4b2; --line:#223044; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial; }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(11,15,20,.92); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .group { display:flex; gap:8px; align-items:center; background: var(--panel); border:1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+    label { font-size: 12px; color: var(--muted); }
+    select, input[type="range"], button {
+      color: var(--text);
+      background: #0f1623;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: #3a5275; }
+    .pill { font-size: 12px; color: var(--muted); padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; }
+    .split { display:grid; grid-template-columns: 380px 1fr; gap: 12px; padding: 12px; }
+    @media (max-width: 980px) { .split { grid-template-columns: 1fr; } header { position: static; } }
+    textarea {
+      width: 100%; height: calc(100vh - 140px);
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      resize: vertical;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+    }
+    main {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+      min-height: calc(100vh - 140px);
+      overflow: hidden;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin: 0 0 10px 0; }
+    .sheet {
+      user-select: none;
+      line-height: 1.55;
+      font-size: var(--fontSize, 18px);
+      cursor: pointer;
+    }
+    .line { padding: 2px 0; white-space: pre-wrap; word-break: break-word; }
+    .section {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed #2a3b55;
+      color: #d9e6ff;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .time { color: #a9b9d4; font-variant-numeric: tabular-nums; margin-right: 8px; }
+    .chord { color: #ffd479; font-weight: 700; }
+    .activeBar {
+      position: fixed; right: 12px; bottom: 12px;
+      background: rgba(18,24,38,.92);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display:flex; gap: 10px; align-items:center;
+      max-width: min(520px, calc(100vw - 24px));
+    }
+    .activeBar strong { font-variant-numeric: tabular-nums; }
+    .kbd { border:1px solid var(--line); border-bottom-width: 3px; border-radius: 8px; padding: 2px 6px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <div class="group">
+        <button id="btnPlay" title="Space">▶︎</button>
+        <span class="pill" id="playState">Paused</span>
+      </div>
+
+      <div class="group">
+        <label>速度</label>
+        <input id="speed" type="range" min="0" max="220" value="60" />
+        <span class="pill"><span id="speedVal">60</span> px/s</span>
+      </div>
+
+      <div class="group">
+        <label>字體</label>
+        <input id="fontSize" type="range" min="12" max="34" value="18" />
+        <span class="pill"><span id="fontVal">18</span> px</span>
+      </div>
+
+      <div class="group">
+        <label>轉調(半音)</label>
+        <button id="btnDown" title="- (半音)">-</button>
+        <span class="pill"><span id="semiVal">0</span></span>
+        <button id="btnUp" title="+ (半音)">+</button>
+        <button id="btnReset">重置</button>
+      </div>
+
+      <div class="group">
+        <label>顯示</label>
+        <select id="accidental">
+          <option value="auto">自動(#/b)</option>
+          <option value="sharp">偏好 #</option>
+          <option value="flat">偏好 b</option>
+        </select>
+        <button id="btnTop" title="Home">回頂</button>
+      </div>
+
+      <div class="group">
+        <label>操作</label>
+        <button id="btnSample">載入模板</button>
+        <button id="btnClear">清空</button>
+        <span class="pill">
+          點譜面切換播放 · <span class="kbd">Space</span> · <span class="kbd">↑↓</span>速度 · <span class="kbd">+/-</span>轉調
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div class="split">
+    <section>
+      <p class="hint">
+        編輯譜面：和弦用 <span class="chord">[Db]</span>、<span class="chord">[Db/F]</span> 包起來；段落：<code>{section: Aメロ}</code>；時間戳：<code>{t:00:07}</code><br>
+        你貼的這些行會被自動忽略：<code>key:</code> / <code>capo:</code> / <code>bpm:</code> / <code>title:</code> / <code>artist:</code>
+      </p>
+      <textarea id="src" spellcheck="false"></textarea>
+    </section>
+
+    <main>
+      <p class="hint">譜面顯示區（點一下開始/暫停自動下拉）</p>
+      <div id="sheet" class="sheet"></div>
+    </main>
+  </div>
+
+  <div class="activeBar" id="statusBar">
+    <span>半音：</span><strong id="statusSemi">0</strong>
+    <span>速度：</span><strong id="statusSpeed">60</strong>
+    <span id="statusMsg" style="color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
