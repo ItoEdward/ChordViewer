@@ -66,13 +66,9 @@ function parseRoot(s) {
 }
 
 function autoPreferFlatFromSource(raw) {
-  const tokens = raw.match(/\[([^\]]+)\]/g) || [];
-  let flats = 0, sharps = 0;
-  for (const t of tokens) {
-    flats += (t.match(/b/g) || []).length;
-    sharps += (t.match(/#/g) || []).length;
-  }
-  return flats >= sharps;
+  // 以 # (sharp) 為主：輸出時不偏好 b (flat)
+  //（輸入若有 Db/Bb 仍可辨識，會轉成 C#/A#）
+  return false;
 }
 
 function transposeChordToken(chord, semitone, preferFlat) {
@@ -207,14 +203,14 @@ function togglePlay() {
 // ----- UI -----
 function setSpeed(v) {
   speedPxPerSec = clamp(Number(v), 0, 9999);
-  speed.value = String(speedPxPerSec);
+  if (speed) speed.value = String(speedPxPerSec);
   if (speedVal) speedVal.textContent = String(speedPxPerSec);
   localStorage.setItem(LS.SPEED, String(speedPxPerSec));
 }
 
 function setFont(v) {
   fontPx = clamp(Number(v), 10, 80);
-  fontSize.value = String(fontPx);
+  if (fontSize) fontSize.value = String(fontPx);
   if (fontVal) fontVal.textContent = String(fontPx);
   document.documentElement.style.setProperty("--fontSize", fontPx + "px");
   localStorage.setItem(LS.FONT, String(fontPx));
@@ -229,10 +225,12 @@ function render() {
 
   const preferFlat = autoPreferFlatFromSource(raw);
 
-  if (!raw.trim()) {
-    sheet.innerHTML = `<div class="line" style="color:#9aa4b2;">（未載入歌曲：請確認有 songs/index.json 與歌曲檔案，且用 http(s) 開啟）</div>`;
-  } else {
-    sheet.innerHTML = parseTextToHtml(raw, semitoneShift, preferFlat);
+  if (sheet) {
+    if (!raw.trim()) {
+      sheet.innerHTML = `<div class="line" style="color:#9aa4b2;">（未載入歌曲：請確認有 songs/index.json 與歌曲檔案，且用 http(s) 開啟）</div>`;
+    } else {
+      sheet.innerHTML = parseTextToHtml(raw, semitoneShift, preferFlat);
+    }
   }
 
   if (semiVal) semiVal.textContent = String(semitoneShift);
@@ -295,7 +293,7 @@ async function loadSongFile(file) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
 
-    src.value = text;
+    if (src) src.value = text;
     semitoneShift = 0; // 換歌清零轉調
     localStorage.setItem(LS.LAST_SONG, file);
     render();
@@ -305,27 +303,32 @@ async function loadSongFile(file) {
   }
 }
 
-// Events
-sheet.addEventListener("click", () => togglePlay());
+// Events (null-safe, so you can freely remove UI blocks without crashing)
+if (sheet) sheet.addEventListener("click", () => togglePlay());
 
-speed.addEventListener("input", () => setSpeed(speed.value));
+if (speed) speed.addEventListener("input", () => setSpeed(speed.value));
 
-fontSize.addEventListener("input", () => setFont(fontSize.value));
+if (fontSize) fontSize.addEventListener("input", () => setFont(fontSize.value));
 
-src.addEventListener("input", () => render());
-src.addEventListener("change", () => render());
-src.addEventListener("compositionend", () => render());
+if (src) {
+  src.addEventListener("input", () => render());
+  src.addEventListener("change", () => render());
+  src.addEventListener("compositionend", () => render());
+}
 
-btnUp.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift += 1; render(); });
-btnDown.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift -= 1; render(); });
+if (btnUp) btnUp.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift += 1; render(); });
+if (btnDown) btnDown.addEventListener("click", (e) => { e.stopPropagation(); semitoneShift -= 1; render(); });
 
-songSelect.addEventListener("change", async () => {
-  const file = songSelect.value;
-  if (!file) return;
-  await loadSongFile(file);
-});
+if (songSelect) {
+  songSelect.addEventListener("change", async () => {
+    const file = songSelect.value;
+    if (!file) return;
+    await loadSongFile(file);
+  });
+}
 
 // Keyboard shortcuts
+
 document.addEventListener("keydown", (e) => {
   if (e.target && (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) {
     if (e.ctrlKey && e.key === "Enter") togglePlay();
